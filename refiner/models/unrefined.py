@@ -42,7 +42,7 @@ class MetadataInput(BaseModel):
     dlp_id: int
     version: str
     file_id: int = Field(alias="file_id") # metadata.file_id
-    job_id: str
+    job_id: int
     owner_address: str
     file: FileInput
 

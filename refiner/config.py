@@ -50,6 +50,11 @@ class Settings(BaseSettings):
         default=None,
         description="Pinata API secret"
     )
+
+    PINATA_API_GATEWAY: Optional[str] = Field(
+        default="https://tan-absent-magpie-105.mypinata.cloud/ipfs",
+        description="Pinata API gateway URL"
+    )
     
     class Config:
         env_file = ".env"

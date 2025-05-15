@@ -83,8 +83,7 @@ def upload_file_to_ipfs(file_path=None):
 if __name__ == "__main__":
     ipfs_hash = upload_file_to_ipfs()
     print(f"File uploaded to IPFS with hash: {ipfs_hash}")
-    print(f"Access at: https://ipfs.vana.org/ipfs/{ipfs_hash}")
-    
+
     ipfs_hash = upload_json_to_ipfs()
     print(f"JSON uploaded to IPFS with hash: {ipfs_hash}")
-    print(f"Access at: https://ipfs.vana.org/ipfs/{ipfs_hash}")
+    print(f"Access at: {settings.PINATA_API_GATEWAY}/{ipfs_hash}")

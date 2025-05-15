@@ -69,7 +69,7 @@ class Refiner:
                 if settings.PINATA_API_KEY and settings.PINATA_API_SECRET:
                     try:
                         ipfs_hash = upload_file_to_ipfs(encrypted_path)
-                        output.refinement_url = f"https://ipfs.vana.org/ipfs/{ipfs_hash}" # TODO : REPLACE WITH PINATA GATEWAY
+                        output.refinement_url = f"{settings.PINATA_API_GATEWAY}/{ipfs_hash}"
                         logging.info(f"Refined data (encrypted DB) uploaded to IPFS: {output.refinement_url}")
                     except Exception as e:
                         logging.error(f"Failed to upload refined data to IPFS: {e}")
