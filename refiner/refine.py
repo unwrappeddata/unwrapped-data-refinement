@@ -4,7 +4,7 @@ import os
 
 from refiner.models.offchain_schema import OffChainSchema
 from refiner.models.output import Output
-from refiner.transformer.unwrapped_transformer import UnwrappedTransformer
+from refiner.transformer.unwrapped_spotify_transformer import UnwrappedSpotifyTransformer
 from refiner.config import settings
 from refiner.utils.encrypt import encrypt_file
 from refiner.utils.ipfs import upload_file_to_ipfs, upload_json_to_ipfs
@@ -15,83 +15,90 @@ class Refiner:
 
     def transform(self) -> Output:
         """Transform all input files into the database."""
-        logging.info("Starting data transformation for Unwrapped Proofs")
-        output = Output()
+        logging.info("Starting data transformation for Unwrapped Spotify Data")
+        output = Output() # Initializes with output_schema=None and refinement_url=None
 
-        # Iterate through files and transform data
-        input_file_processed = False
+        processed_files = 0
         for input_filename in os.listdir(settings.INPUT_DIR):
-            if input_filename.lower().endswith('.json'):
-                input_file_path = os.path.join(settings.INPUT_DIR, input_filename)
-                logging.info(f"Found input JSON file: {input_file_path}")
-                try:
-                    with open(input_file_path, 'r') as f:
-                        input_data = json.load(f)
-                except json.JSONDecodeError as e:
-                    logging.error(f"Error decoding JSON from {input_filename}: {e}")
-                    continue # Skip this file
-
-                # Transform data
-                transformer = UnwrappedTransformer(self.db_path)
-                transformer.process(input_data)
-                logging.info(f"Transformed {input_filename}")
-                input_file_processed = True
-
-                # Create a schema based on the SQLAlchemy schema
-                schema = OffChainSchema(
-                    name=settings.SCHEMA_NAME,
-                    version=settings.SCHEMA_VERSION,
-                    description=settings.SCHEMA_DESCRIPTION,
-                    dialect=settings.SCHEMA_DIALECT,
-                    schema=transformer.get_schema()
-                )
-                output.schema = schema
-
-                # Upload the schema to IPFS
-                schema_file = os.path.join(settings.OUTPUT_DIR, 'schema.json')
-                with open(schema_file, 'w') as f:
-                    json.dump(schema.model_dump(), f, indent=4)
-
-                if settings.PINATA_API_KEY and settings.PINATA_API_SECRET:
+            input_file = os.path.join(settings.INPUT_DIR, input_filename)
+            if os.path.isfile(input_file) and os.path.splitext(input_file)[1].lower() == '.json':
+                logging.info(f"Processing input file: {input_filename}")
+                with open(input_file, 'r') as f:
                     try:
-                        schema_ipfs_hash = upload_json_to_ipfs(schema.model_dump())
-                        logging.info(f"Schema uploaded to IPFS with hash: {schema_ipfs_hash}")
-                    except Exception as e:
-                        logging.error(f"Failed to upload schema to IPFS: {e}")
-                else:
-                    logging.warning("Pinata API Key/Secret not configured. Skipping IPFS upload for schema.")
+                        input_data = json.load(f)
+                    except json.JSONDecodeError as e:
+                        logging.error(f"Error decoding JSON from {input_filename}: {e}")
+                        continue # Skip this file
 
+                    # The DataTransformer._initialize_database (called by __init__)
+                    # deletes and recreates the DB. This is fine for a single input JSON.
+                    transformer = UnwrappedSpotifyTransformer(self.db_path)
+                    transformer.process(input_data)
+                    logging.info(f"Transformed {input_filename}")
+                    processed_files +=1
 
-                # Encrypt and upload the database to IPFS
+                    # Generate and set the schema definition in the output object
+                    # This will only happen once, for the first processed file.
+                    if not output.output_schema:
+                        schema_obj = OffChainSchema(
+                            name=settings.SCHEMA_NAME,
+                            version=settings.SCHEMA_VERSION,
+                            description=settings.SCHEMA_DESCRIPTION,
+                            dialect=settings.SCHEMA_DIALECT,
+                            schema_definition=transformer.get_schema() # Use renamed field
+                        )
+                        output.output_schema = schema_obj # Assign to renamed field
+
+                        # Save the schema.json locally
+                        schema_file_path = os.path.join(settings.OUTPUT_DIR, 'schema.json')
+                        with open(schema_file_path, 'w') as sf:
+                            json.dump(schema_obj.model_dump(), sf, indent=4)
+                        logging.info(f"Schema definition saved to {schema_file_path}")
+
+                        # Upload the schema to IPFS if Pinata credentials are provided
+                        if settings.PINATA_API_KEY and settings.PINATA_API_SECRET:
+                            try:
+                                schema_ipfs_hash = upload_json_to_ipfs(schema_obj.model_dump())
+                                logging.info(f"Schema uploaded to IPFS with hash: {schema_ipfs_hash}")
+                                # Optionally, store this IPFS hash in the output if needed by Vana service
+                                # output.schema_ipfs_url = f"ipfs://{schema_ipfs_hash}"
+                            except Exception as e:
+                                logging.error(f"Failed to upload schema to IPFS: {e}")
+                        else:
+                            logging.warning("Pinata API Key/Secret not set. Skipping IPFS upload for schema.")
+
+                    # If we intend one DB per input file, encryption and upload should happen here,
+                    # and the loop should probably break or handle multiple output CIDs.
+                    # Given Vana's model, one refinement job usually processes one input file.
+                    # So, this loop processing multiple JSONs into one DB might be an edge case
+                    # or for local testing. Let's assume for now only one JSON is expected in /input.
+
+        if processed_files > 0:
+            # Encrypt and upload the database to IPFS. This happens after all files are processed.
+            # If only one JSON file was in input_dir, self.db_path contains its refined data.
+            try:
                 encrypted_path = encrypt_file(settings.REFINEMENT_ENCRYPTION_KEY, self.db_path)
+                logging.info(f"Database encrypted to: {encrypted_path}")
 
-                # Only upload refinement if Pinata keys are configured
                 if settings.PINATA_API_KEY and settings.PINATA_API_SECRET:
                     try:
                         ipfs_hash = upload_file_to_ipfs(encrypted_path)
                         output.refinement_url = f"{settings.PINATA_API_GATEWAY}/{ipfs_hash}"
-                        logging.info(f"Refined data (encrypted DB) uploaded to IPFS: {output.refinement_url}")
+
+                        logging.info(f"Encrypted database uploaded to IPFS with hash: {ipfs_hash}")
                     except Exception as e:
-                        logging.error(f"Failed to upload refined data to IPFS: {e}")
-                        # Set a local file path if IPFS upload fails but Pinata was configured
-                        output.refinement_url = f"file://{encrypted_path}"
+                        logging.error(f"Failed to upload refined database to IPFS: {e}")
+                        output.refinement_url = f"file://{encrypted_path}" # Fallback to local file path
                 else:
-                    logging.warning("Pinata API Key/Secret not configured. Skipping IPFS upload for refined data.")
-                    # Provide a local file path for the encrypted database if not uploading
-                    output.refinement_url = f"file://{encrypted_path}"
+                    logging.warning("Pinata API Key/Secret not set. Skipping IPFS upload for refined database.")
+                    output.refinement_url = f"file://{encrypted_path}" # Local file path if not uploaded
+            except Exception as e:
+                logging.error(f"Error during database encryption or upload: {e}")
+                # Potentially set output.refinement_url to None or an error indicator
 
-                break # Assuming only one main JSON proof file to process
+        elif processed_files == 0:
+            logging.warning("No JSON files were processed from the input directory.")
+            # Output will have None for output_schema and refinement_url
 
-        if not input_file_processed:
-            logging.warning("No JSON input file was processed.")
-            # For now, let's allow an empty output if no files were processed,
-            # but the `run()` in __main__.py will raise FileNotFoundError if INPUT_DIR is empty.
-            # If INPUT_DIR has non-JSON files, it will reach here.
-            if not os.path.exists(self.db_path): # If DB wasn't even created
-                # Create an empty DB so encryption doesn't fail
-                UnwrappedTransformer(self.db_path) # This initializes an empty DB
-                logging.info("Created an empty database as no input files were processed.")
-
-
-        logging.info("Data transformation completed.")
+        logging.info(f"Data transformation completed. Output: {output.model_dump_json(indent=2)}")
         return output

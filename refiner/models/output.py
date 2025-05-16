@@ -5,4 +5,4 @@ from refiner.models.offchain_schema import OffChainSchema
 
 class Output(BaseModel):
     refinement_url: Optional[str] = None
-    schema: Optional[OffChainSchema] = None
+    output_schema: Optional[OffChainSchema] = None

@@ -1,58 +1,46 @@
-from typing import Optional, Dict, Any, Union
-from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, Field # Reverted to Field
 
-class PointsBreakdownInput(BaseModel):
-    volume_points: int
-    volume_reason: str
-    diversity_points: int
-    diversity_reason: str
-    history_points: int
-    history_reason: str
+class UnwrappedUser(BaseModel):
+    id_hash: str
+    country: Optional[str] = None
+    product: Optional[str] = None
 
-class AttributesInputValid(BaseModel):
-    account_id_hash: str
-    track_count: int
+class UnwrappedStats(BaseModel):
     total_minutes: int
-    data_validated: bool
+    track_count: int
+    unique_artists_count: int
     activity_period_days: int
-    unique_artists: int
-    previously_contributed: bool
-    times_rewarded: int
-    total_points: int
-    differential_points: int
-    points_breakdown: PointsBreakdownInput
+    first_listen: Optional[str] = None # ISO datetime string
+    last_listen: Optional[str] = None  # ISO datetime string
 
-class AttributesInputError(BaseModel):
-    error: str
+class UnwrappedPlayedTrack(BaseModel):
+    track_id: str
+    artist_id: str # Primary artist ID
+    duration_ms: int
+    listened_at: str # ISO datetime string
 
-AttributesInput = Union[AttributesInputValid, AttributesInputError]
-
-
-class FileChecksumsInput(BaseModel):
-    encrypted: str
-    decrypted: str
-
-class FileInput(BaseModel):
-    id: int
-    source: str
+class UnwrappedArtistImage(BaseModel):
     url: str
-    checksums: FileChecksumsInput
+    height: Optional[int] = None
+    width: Optional[int] = None
 
-class MetadataInput(BaseModel):
-    dlp_id: int
-    version: str
-    file_id: int = Field(alias="file_id") # metadata.file_id
-    job_id: int
-    owner_address: str
-    file: FileInput
+class UnwrappedArtistFollowers(BaseModel):
+    href: Optional[str] = None
+    total: int
 
-class UnwrappedProofInput(BaseModel):
-    dlp_id: int
-    valid: bool
-    score: float
-    authenticity: float
-    ownership: float
-    quality: float
-    uniqueness: float
-    attributes: AttributesInput
-    metadata: MetadataInput
+class UnwrappedTopArtist(BaseModel):
+    id: str # Artist ID
+    name: str
+    popularity: Optional[int] = None
+    genres: Optional[List[str]] = Field(default_factory=list) # Using Field
+    followers: Optional[UnwrappedArtistFollowers] = None
+    images: Optional[List[UnwrappedArtistImage]] = Field(default_factory=list) # Using Field
+    play_count: Optional[str] = None
+    last_played: Optional[str] = None
+
+class UnwrappedData(BaseModel):
+    user: UnwrappedUser
+    stats: UnwrappedStats
+    tracks: List[UnwrappedPlayedTrack] = Field(default_factory=list) # Using Field
+    top_artists_medium_term: Optional[List[UnwrappedTopArtist]] = Field(default_factory=list) # Using Field

@@ -1,82 +1,66 @@
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, Text, JSON
 from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.declarative import declarative_base # Use this for SQLAlchemy Base
 
-# Base model for SQLAlchemy
 Base = declarative_base()
 
-class UnwrappedProof(Base):
-    __tablename__ = 'unwrapped_proofs'
+class User(Base):
+    __tablename__ = 'users'
+    id_hash = Column(String, primary_key=True, index=True)
+    country = Column(String, nullable=True)
+    product = Column(String, nullable=True)
+    file_id = Column(Integer, index=True, nullable=True) # From environment variable
 
+    listening_stats = relationship("UserListeningStats", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    played_tracks = relationship("PlayedTrack", back_populates="user", cascade="all, delete-orphan")
+    top_artists_assoc = relationship("UserTopArtistAssoc", back_populates="user", cascade="all, delete-orphan")
+
+class UserListeningStats(Base):
+    __tablename__ = 'user_listening_stats'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    file_id = Column(Integer, nullable=False, unique=True, index=True)
-    dlp_id = Column(Integer, nullable=False)
-    is_valid = Column(Boolean, nullable=False)
-    score = Column(Float, nullable=False)
-    authenticity_score = Column(Float, nullable=False)
-    ownership_score = Column(Float, nullable=False)
-    quality_score = Column(Float, nullable=False)
-    uniqueness_score = Column(Float, nullable=False)
+    user_id_hash = Column(String, ForeignKey('users.id_hash'), nullable=False, index=True, unique=True)
+    total_minutes = Column(Integer, nullable=False)
+    track_count = Column(Integer, nullable=False)
+    unique_artists_count = Column(Integer, nullable=False)
+    activity_period_days = Column(Integer, nullable=False)
+    first_listen_at = Column(DateTime, nullable=True)
+    last_listen_at = Column(DateTime, nullable=True)
+    refined_at = Column(DateTime, default=datetime.utcnow)
 
-    proof_version = Column(String)
-    job_id = Column(String)
-    owner_address = Column(String)
-    account_id_hash = Column(String, nullable=True, index=True) # Nullable if proof is invalid
-    error_message = Column(String, nullable=True) # Populated if is_valid is False
+    user = relationship("User", back_populates="listening_stats")
 
-    processed_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+class Artist(Base):
+    __tablename__ = 'artists'
+    id = Column(String, primary_key=True, index=True) # Spotify artist ID
+    name = Column(String, nullable=False) # Will use placeholder if name not in top_artists
+    popularity = Column(Integer, nullable=True)
+    genres = Column(JSON, nullable=True) # Storing as JSON string or native JSON type if DB supports
+    followers_total = Column(Integer, nullable=True)
+    primary_image_url = Column(String, nullable=True)
 
-    # Relationships
-    attributes = relationship("ProofAttribute", back_populates="proof", uselist=False, cascade="all, delete-orphan")
-    source_file_metadata = relationship("SourceFileMetadata", back_populates="proof", uselist=False, cascade="all, delete-orphan")
+    played_tracks = relationship("PlayedTrack", back_populates="artist")
+    top_artist_for_users_assoc = relationship("UserTopArtistAssoc", back_populates="artist")
 
-class ProofAttribute(Base):
-    __tablename__ = 'proof_attributes'
-
+class PlayedTrack(Base):
+    __tablename__ = 'played_tracks'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    proof_file_id = Column(Integer, ForeignKey('unwrapped_proofs.file_id'), nullable=False, unique=True)
+    user_id_hash = Column(String, ForeignKey('users.id_hash'), nullable=False, index=True)
+    track_id = Column(String, nullable=False, index=True)
+    artist_id = Column(String, ForeignKey('artists.id'), nullable=False, index=True)
+    duration_ms = Column(Integer, nullable=False)
+    listened_at = Column(DateTime, nullable=False, index=True)
 
-    track_count = Column(Integer)
-    total_minutes_listened = Column(Integer)
-    is_data_validated = Column(Boolean)
-    activity_period_days = Column(Integer)
-    unique_artist_count = Column(Integer)
-    was_previously_contributed = Column(Boolean)
-    times_rewarded = Column(Integer)
-    total_points_raw = Column(Integer)
-    differential_points_raw = Column(Integer)
+    user = relationship("User", back_populates="played_tracks")
+    artist = relationship("Artist", back_populates="played_tracks")
 
-    # Relationship
-    proof = relationship("UnwrappedProof", back_populates="attributes")
-    points_breakdown = relationship("PointsBreakdownScore", back_populates="attribute_detail", uselist=False, cascade="all, delete-orphan")
-
-class PointsBreakdownScore(Base):
-    __tablename__ = 'points_breakdown_scores'
-
+class UserTopArtistAssoc(Base):
+    __tablename__ = 'user_top_artists'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    attribute_id = Column(Integer, ForeignKey('proof_attributes.id'), nullable=False, unique=True)
+    user_id_hash = Column(String, ForeignKey('users.id_hash'), nullable=False, index=True)
+    artist_id = Column(String, ForeignKey('artists.id'), nullable=False, index=True)
+    play_count = Column(Integer, nullable=True)
+    last_played_at = Column(DateTime, nullable=True)
 
-    volume_points = Column(Integer)
-    volume_reason = Column(String)
-    diversity_points = Column(Integer)
-    diversity_reason = Column(String)
-    history_points = Column(Integer)
-    history_reason = Column(String)
-
-    # Relationship
-    attribute_detail = relationship("ProofAttribute", back_populates="points_breakdown")
-
-class SourceFileMetadata(Base):
-    __tablename__ = 'source_file_metadata'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    proof_file_id = Column(Integer, ForeignKey('unwrapped_proofs.file_id'), nullable=False, unique=True)
-
-    source_system = Column(String) # e.g., "TEE"
-    source_file_url = Column(String)
-    encrypted_checksum = Column(String)
-    decrypted_checksum = Column(String)
-
-    # Relationship
-    proof = relationship("UnwrappedProof", back_populates="source_file_metadata")
+    user = relationship("User", back_populates="top_artists_assoc")
+    artist = relationship("Artist", back_populates="top_artist_for_users_assoc")
