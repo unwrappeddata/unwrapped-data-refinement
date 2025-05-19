@@ -33,14 +33,11 @@ class UnwrappedTopArtist(BaseModel):
     id: str # Artist ID
     name: str
     popularity: Optional[int] = None
-    genres: Optional[List[str]] = Field(default_factory=list) # Using Field
-    followers: Optional[UnwrappedArtistFollowers] = None
-    images: Optional[List[UnwrappedArtistImage]] = Field(default_factory=list) # Using Field
     play_count: Optional[str] = None
     last_played: Optional[str] = None
 
 class UnwrappedData(BaseModel):
     user: UnwrappedUser
     stats: UnwrappedStats
-    tracks: List[UnwrappedPlayedTrack] = Field(default_factory=list) # Using Field
+    tracks: List[UnwrappedPlayedTrack] = Field(default_factory=list)
     top_artists_medium_term: Optional[List[UnwrappedTopArtist]] = Field(default_factory=list) # Using Field

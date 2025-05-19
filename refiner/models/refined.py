@@ -35,10 +35,6 @@ class Artist(Base):
     id = Column(String, primary_key=True, index=True) # Spotify artist ID
     name = Column(String, nullable=False) # Will use placeholder if name not in top_artists
     popularity = Column(Integer, nullable=True)
-    genres = Column(JSON, nullable=True) # Storing as JSON string or native JSON type if DB supports
-    followers_total = Column(Integer, nullable=True)
-    primary_image_url = Column(String, nullable=True)
-
     played_tracks = relationship("PlayedTrack", back_populates="artist")
     top_artist_for_users_assoc = relationship("UserTopArtistAssoc", back_populates="artist")
 

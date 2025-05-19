@@ -21,18 +21,18 @@ class Settings(BaseSettings):
     )
 
     SCHEMA_NAME: str = Field(
-        default="Unwrapped Spotify Contribution Proof",
-        description="Name of the schema"
+        default="Unwrapped Spotify Data",
+        description="Schema name for Unwrapped Spotify listening data"
     )
 
     SCHEMA_VERSION: str = Field(
-        default="1.0.0",
-        description="Version of the schema"
+        default="0.1.1",
+        description="Version of the Unwrapped Spotify schema"
     )
 
     SCHEMA_DESCRIPTION: str = Field(
-        default="Schema for refined Unwrapped Spotify listening data contribution proofs.",
-        description="Description of the schema"
+        default="Refined schema for Spotify listening history and top artists contributed via the Unwrapped platform. Artist details are enriched via an external API.",
+        description="Description of the Unwrapped Spotify schema"
     )
 
     SCHEMA_DIALECT: str = Field(
@@ -51,14 +51,25 @@ class Settings(BaseSettings):
         description="Pinata API secret"
     )
 
+    PINATA_API_GATEWAY: Optional[str] = Field(
+        default="https://api.pinata.cloud",
+        description="Pinata API gateway URL"
+    )
+
     FILE_ID: Optional[int] = Field(
         default=None,
         description="File ID of the input file being processed, injected by the refinement service."
     )
 
-    PINATA_API_GATEWAY: Optional[str] = Field(
-        default="https://tan-absent-magpie-105.mypinata.cloud/ipfs",
-        description="Pinata API gateway URL"
+    # ARTIST_API_BASE_URL: str = Field(
+    #     default="http://localhost:3000/api", # Default for local Unwrapped UI API
+    #     description="Base URL for the API to fetch artist and track details."
+    # )
+    DATA_REFINEMENT_API_BASE_URL: str = Field()
+
+    API_CALL_DELAY_SECONDS: float = Field(
+        default=0.05, # Small delay to be nice to local API
+        description="Delay in seconds between API calls to fetch artist/track details."
     )
 
     class Config:
