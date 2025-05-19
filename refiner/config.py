@@ -26,12 +26,12 @@ class Settings(BaseSettings):
     )
 
     SCHEMA_VERSION: str = Field(
-        default="0.1.1",
+        default="0.1.2",
         description="Version of the Unwrapped Spotify schema"
     )
 
     SCHEMA_DESCRIPTION: str = Field(
-        default="Refined schema for Spotify listening history and top artists contributed via the Unwrapped platform. Artist details are enriched via an external API.",
+        default="Refined schema for Spotify listening history and derived top artists. Artist details are enriched via Spotify Web API.",
         description="Description of the Unwrapped Spotify schema"
     )
 
@@ -52,8 +52,8 @@ class Settings(BaseSettings):
     )
 
     PINATA_API_GATEWAY: Optional[str] = Field(
-        default="https://api.pinata.cloud",
-        description="Pinata API gateway URL"
+        default="https://gateway.pinata.cloud/ipfs",
+        description="Pinata API gateway URL. Note: This is the gateway to access, not the API endpoint for upload."
     )
 
     FILE_ID: Optional[int] = Field(
@@ -61,16 +61,33 @@ class Settings(BaseSettings):
         description="File ID of the input file being processed, injected by the refinement service."
     )
 
-    # ARTIST_API_BASE_URL: str = Field(
-    #     default="http://localhost:3000/api", # Default for local Unwrapped UI API
-    #     description="Base URL for the API to fetch artist and track details."
-    # )
-    DATA_REFINEMENT_API_BASE_URL: str = Field()
-
-    API_CALL_DELAY_SECONDS: float = Field(
-        default=0.05, # Small delay to be nice to local API
-        description="Delay in seconds between API calls to fetch artist/track details."
+    # Spotify Web API Credentials
+    SPOTIFY_CLIENT_ID: Optional[str] = Field(
+        default=None,
+        description="Spotify Web API Client ID"
     )
+    SPOTIFY_CLIENT_SECRET: Optional[str] = Field(
+        default=None,
+        description="Spotify Web API Client Secret"
+    )
+    SPOTIFY_API_URL: str = Field(
+        default="https://api.spotify.com/v1",
+        description="Base URL for Spotify Web API"
+    )
+    SPOTIFY_TOKEN_URL: str = Field(
+        default="https://accounts.spotify.com/api/token",
+        description="Token URL for Spotify Web API"
+    )
+    SPOTIFY_MAX_IDS_PER_BATCH: int = Field(
+        default=50,
+        description="Max IDs for Spotify batch API calls (artists/tracks)"
+    )
+    SPOTIFY_API_CALL_DELAY_SECONDS: float = Field(
+        default=0.1, # Slightly increased default for Spotify API
+        description="Delay in seconds between individual Spotify API calls."
+    )
+    # Deprecating ARTIST_API_BASE_URL as SpotifyAPIClient handles its own base URL
+    # API_CALL_DELAY_SECONDS is now SPOTIFY_API_CALL_DELAY_SECONDS
 
     class Config:
         env_file = ".env"
