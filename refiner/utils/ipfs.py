@@ -32,6 +32,7 @@ def upload_json_to_ipfs(data):
 
         result = response.json()
         logging.info(f"Successfully uploaded JSON to IPFS with hash: {result['IpfsHash']}")
+        logging.info(f"Access at: {settings.PINATA_API_GATEWAY}/{result['IpfsHash']}")
         return result['IpfsHash']
 
     except requests.exceptions.RequestException as e:
@@ -73,6 +74,7 @@ def upload_file_to_ipfs(file_path=None):
         response.raise_for_status()
         result = response.json()
         logging.info(f"Successfully uploaded file to IPFS with hash: {result['IpfsHash']}")
+        logging.info(f"Access at: {settings.PINATA_API_GATEWAY}/{result['IpfsHash']}")
         return result['IpfsHash']
 
     except requests.exceptions.RequestException as e:
@@ -83,8 +85,7 @@ def upload_file_to_ipfs(file_path=None):
 if __name__ == "__main__":
     ipfs_hash = upload_file_to_ipfs()
     print(f"File uploaded to IPFS with hash: {ipfs_hash}")
-    print(f"Access at: https://ipfs.vana.org/ipfs/{ipfs_hash}")
-    
+
     ipfs_hash = upload_json_to_ipfs()
     print(f"JSON uploaded to IPFS with hash: {ipfs_hash}")
-    print(f"Access at: https://ipfs.vana.org/ipfs/{ipfs_hash}")
+    print(f"Access at: {settings.PINATA_API_GATEWAY}/{ipfs_hash}")

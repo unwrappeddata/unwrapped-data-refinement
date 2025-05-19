@@ -1,41 +1,66 @@
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, Float, ForeignKey, DateTime
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, Text, JSON
 from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declarative_base # Use this for SQLAlchemy Base
 
-# Base model for SQLAlchemy
 Base = declarative_base()
 
-# Define database models - the schema is generated using these
-class UserRefined(Base):
+class User(Base):
     __tablename__ = 'users'
-    
-    user_id = Column(String, primary_key=True)
-    email = Column(String, nullable=False, unique=True)
-    name = Column(String, nullable=False)
-    locale = Column(String, nullable=False)
-    created_at = Column(DateTime, nullable=False)
-    
-    storage_metrics = relationship("StorageMetric", back_populates="user")
-    auth_sources = relationship("AuthSource", back_populates="user")
+    id_hash = Column(String, primary_key=True, index=True)
+    country = Column(String, nullable=True)
+    product = Column(String, nullable=True)
+    file_id = Column(Integer, index=True, nullable=True) # Populated from settings.FILE_ID if available
 
-class StorageMetric(Base):
-    __tablename__ = 'storage_metrics'
-    
-    metric_id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(String, ForeignKey('users.user_id'), nullable=False)
-    percent_used = Column(Float, nullable=False)
-    recorded_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    
-    user = relationship("UserRefined", back_populates="storage_metrics")
+    listening_stats = relationship("UserListeningStats", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    played_tracks = relationship("PlayedTrack", back_populates="user", cascade="all, delete-orphan")
+    top_artists_assoc = relationship("UserTopArtistAssoc", back_populates="user", cascade="all, delete-orphan")
 
-class AuthSource(Base):
-    __tablename__ = 'auth_sources'
-    
-    auth_id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(String, ForeignKey('users.user_id'), nullable=False)
-    source = Column(String, nullable=False)
-    collection_date = Column(DateTime, nullable=False)
-    data_type = Column(String, nullable=False)
-    
-    user = relationship("UserRefined", back_populates="auth_sources")
+class UserListeningStats(Base):
+    __tablename__ = 'user_listening_stats'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id_hash = Column(String, ForeignKey('users.id_hash'), nullable=False, index=True, unique=True)
+    total_minutes = Column(Integer, nullable=False)
+    track_count = Column(Integer, nullable=False) # From input stats, may not match count of PlayedTrack if some tracks are skipped
+    unique_artists_count = Column(Integer, nullable=False) # From input stats, may not match count of distinct resolved Artists
+    activity_period_days = Column(Integer, nullable=False)
+    first_listen_at = Column(DateTime, nullable=True)
+    last_listen_at = Column(DateTime, nullable=True)
+    refined_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="listening_stats")
+
+class Artist(Base):
+    __tablename__ = 'artists'
+    id = Column(String, primary_key=True, index=True) # Spotify artist ID
+    name = Column(String, nullable=False) # Name fetched from Spotify API
+    popularity = Column(Integer, nullable=True)
+    genres = Column(JSON, nullable=True) # Storing as JSON array
+    followers_total = Column(Integer, nullable=True)
+    primary_image_url = Column(String, nullable=True)
+
+    played_tracks = relationship("PlayedTrack", back_populates="artist")
+    top_artist_for_users_assoc = relationship("UserTopArtistAssoc", back_populates="artist")
+
+class PlayedTrack(Base):
+    __tablename__ = 'played_tracks'
+    id = Column(Integer, primary_key=True, autoincrement=True) # Auto-generated primary key for the row
+    user_id_hash = Column(String, ForeignKey('users.id_hash'), nullable=False, index=True)
+    track_id = Column(String, nullable=False, index=True) # Spotify track ID from input
+    artist_id = Column(String, ForeignKey('artists.id'), nullable=False, index=True) # Spotify artist ID (resolved, from Artist table)
+    duration_ms = Column(Integer, nullable=False)
+    listened_at = Column(DateTime, nullable=False, index=True)
+
+    user = relationship("User", back_populates="played_tracks")
+    artist = relationship("Artist", back_populates="played_tracks")
+
+class UserTopArtistAssoc(Base):
+    __tablename__ = 'user_top_artists'
+    id = Column(Integer, primary_key=True, autoincrement=True) # Auto-generated primary key
+    user_id_hash = Column(String, ForeignKey('users.id_hash'), nullable=False, index=True)
+    artist_id = Column(String, ForeignKey('artists.id'), nullable=False, index=True) # Spotify artist ID (resolved, from Artist table)
+    play_count = Column(Integer, nullable=False) # Derived from played_tracks
+    last_played_at = Column(DateTime, nullable=True) # Derived from played_tracks
+
+    user = relationship("User", back_populates="top_artists_assoc")
+    artist = relationship("Artist", back_populates="top_artist_for_users_assoc")
