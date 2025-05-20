@@ -40,4 +40,9 @@ class UnwrappedData(BaseModel):
     user: UnwrappedUser
     stats: UnwrappedStats
     tracks: List[UnwrappedPlayedTrack] = Field(default_factory=list)
-    top_artists_medium_term: Optional[List[UnwrappedTopArtist]] = Field(default_factory=list) # Using Field
+    top_artists_medium_term: Optional[List[UnwrappedTopArtist]] = Field(default_factory=list)
+
+class Metadata(BaseModel):
+    source: str
+    collectionDate: str
+    dataType: str

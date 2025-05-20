@@ -56,11 +56,6 @@ class Settings(BaseSettings):
         description="Pinata API gateway URL. Note: This is the gateway to access, not the API endpoint for upload."
     )
 
-    FILE_ID: Optional[int] = Field(
-        default=None,
-        description="File ID of the input file being processed, injected by the refinement service."
-    )
-
     # Spotify Web API Credentials
     SPOTIFY_CLIENT_ID: Optional[str] = Field(
         default=None,
