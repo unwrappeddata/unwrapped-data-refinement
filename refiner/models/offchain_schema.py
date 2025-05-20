@@ -5,4 +5,4 @@ class OffChainSchema(BaseModel):
     version: str
     description: str
     dialect: str
-    schema: str
+    schema_definition: str
