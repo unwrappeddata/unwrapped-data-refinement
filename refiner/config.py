@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     )
 
     SCHEMA_VERSION: str = Field(
-        default="0.1.2",
+        default="0.1.3",
         description="Version of the Unwrapped Spotify schema"
     )
 
@@ -56,11 +56,6 @@ class Settings(BaseSettings):
         description="Pinata API gateway URL. Note: This is the gateway to access, not the API endpoint for upload."
     )
 
-    FILE_ID: Optional[int] = Field(
-        default=None,
-        description="File ID of the input file being processed, injected by the refinement service."
-    )
-
     # Spotify Web API Credentials
     SPOTIFY_CLIENT_ID: Optional[str] = Field(
         default=None,
@@ -86,8 +81,6 @@ class Settings(BaseSettings):
         default=0.1, # Slightly increased default for Spotify API
         description="Delay in seconds between individual Spotify API calls."
     )
-    # Deprecating ARTIST_API_BASE_URL as SpotifyAPIClient handles its own base URL
-    # API_CALL_DELAY_SECONDS is now SPOTIFY_API_CALL_DELAY_SECONDS
 
     class Config:
         env_file = ".env"

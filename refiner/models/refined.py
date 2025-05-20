@@ -10,7 +10,6 @@ class User(Base):
     id_hash = Column(String, primary_key=True, index=True)
     country = Column(String, nullable=True)
     product = Column(String, nullable=True)
-    file_id = Column(Integer, index=True, nullable=True) # Populated from settings.FILE_ID if available
 
     listening_stats = relationship("UserListeningStats", back_populates="user", uselist=False, cascade="all, delete-orphan")
     played_tracks = relationship("PlayedTrack", back_populates="user", cascade="all, delete-orphan")
@@ -33,7 +32,7 @@ class UserListeningStats(Base):
 class Artist(Base):
     __tablename__ = 'artists'
     id = Column(String, primary_key=True, index=True) # Spotify artist ID
-    name = Column(String, nullable=False) # Name fetched from Spotify API
+    name = Column(String, nullable=False)
     popularity = Column(Integer, nullable=True)
     genres = Column(JSON, nullable=True) # Storing as JSON array
     followers_total = Column(Integer, nullable=True)
@@ -44,10 +43,10 @@ class Artist(Base):
 
 class PlayedTrack(Base):
     __tablename__ = 'played_tracks'
-    id = Column(Integer, primary_key=True, autoincrement=True) # Auto-generated primary key for the row
+    id = Column(Integer, primary_key=True, autoincrement=True)
     user_id_hash = Column(String, ForeignKey('users.id_hash'), nullable=False, index=True)
-    track_id = Column(String, nullable=False, index=True) # Spotify track ID from input
-    artist_id = Column(String, ForeignKey('artists.id'), nullable=False, index=True) # Spotify artist ID (resolved, from Artist table)
+    track_id = Column(String, nullable=False, index=True)
+    artist_id = Column(String, ForeignKey('artists.id'), nullable=False, index=True)
     duration_ms = Column(Integer, nullable=False)
     listened_at = Column(DateTime, nullable=False, index=True)
 
@@ -56,11 +55,11 @@ class PlayedTrack(Base):
 
 class UserTopArtistAssoc(Base):
     __tablename__ = 'user_top_artists'
-    id = Column(Integer, primary_key=True, autoincrement=True) # Auto-generated primary key
+    id = Column(Integer, primary_key=True, autoincrement=True)
     user_id_hash = Column(String, ForeignKey('users.id_hash'), nullable=False, index=True)
-    artist_id = Column(String, ForeignKey('artists.id'), nullable=False, index=True) # Spotify artist ID (resolved, from Artist table)
-    play_count = Column(Integer, nullable=False) # Derived from played_tracks
-    last_played_at = Column(DateTime, nullable=True) # Derived from played_tracks
+    artist_id = Column(String, ForeignKey('artists.id'), nullable=False, index=True)
+    play_count = Column(Integer, nullable=False)
+    last_played_at = Column(DateTime, nullable=True)
 
     user = relationship("User", back_populates="top_artists_assoc")
     artist = relationship("Artist", back_populates="top_artist_for_users_assoc")

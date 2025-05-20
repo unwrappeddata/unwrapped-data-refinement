@@ -51,8 +51,7 @@ class UnwrappedSpotifyTransformer(DataTransformer):
         refined_user = User(
             id_hash=unrefined.user.id_hash,
             country=unrefined.user.country,
-            product=unrefined.user.product,
-            file_id=settings.FILE_ID
+            product=unrefined.user.product
         )
         models_to_save.append(refined_user)
 

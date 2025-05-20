@@ -80,7 +80,7 @@ class Refiner:
                                     version=settings.SCHEMA_VERSION,
                                     description=settings.SCHEMA_DESCRIPTION,
                                     dialect=settings.SCHEMA_DIALECT,
-                                    schema_definition=schema_str
+                                    schema=schema_str
                                 )
                                 output.output_schema = schema_obj
 
