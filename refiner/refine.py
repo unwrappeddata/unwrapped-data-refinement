@@ -37,7 +37,8 @@ class Refiner:
         # So, only the last processed JSON file's data will persist if multiple are present.
         # This refinement is for "a contribution", typically one results.json.
 
-        transformer = UnwrappedSpotifyTransformer(self.db_path) # Initializes DB (deletes if exists)
+        transformer = UnwrappedSpotifyTransformer(self.db_path)
+        logger.info(f"Input directory contents: {os.listdir(settings.INPUT_DIR)}")
 
         for input_filename in os.listdir(settings.INPUT_DIR):
             input_file_path = os.path.join(settings.INPUT_DIR, input_filename)
@@ -124,8 +125,8 @@ class Refiner:
             logger.error("Data refinement process completed, but no valid records were generated and saved from the input file(s).")
             raise ValueError("No records refined from input JSON file(s). Halting process.")
         elif json_files_found_and_attempted == 0:
+            logger.error(f"No JSON files found in input directory: {settings.INPUT_DIR}. Found: {os.listdir(settings.INPUT_DIR)}")
             # This case should ideally be caught by __main__.py before calling Refiner.
-            logger.warning("No JSON input files were found in the input directory to process.")
             # No ValueError here, as no work was attempted. __main__ might raise FileNotFoundError.
             return output # Return empty output
 
