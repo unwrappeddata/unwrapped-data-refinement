@@ -3,3 +3,5 @@ pydantic
 pydantic_settings
 requests
 sqlalchemy
+py-multiformats-cid
+multiformats

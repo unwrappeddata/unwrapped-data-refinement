@@ -7,7 +7,7 @@ from refiner.models.output import Output
 from refiner.transformer.unwrapped_spotify_transformer import UnwrappedSpotifyTransformer
 from refiner.config import settings
 from refiner.utils.encrypt import encrypt_file
-from refiner.utils.ipfs import upload_file_to_ipfs, upload_json_to_ipfs
+from refiner.utils.ipfs import upload_file_to_ipfs, upload_json_to_ipfs, calculate_cid_for_json_obj
 
 logger = logging.getLogger(__name__)
 
@@ -83,17 +83,29 @@ class Refiner:
                                     schema=schema_str
                                 )
                                 output.output_schema = schema_obj
+                                schema_as_dict = schema_obj.model_dump(exclude_none=True)
 
                                 schema_file_path = os.path.join(settings.OUTPUT_DIR, 'schema.json')
                                 with open(schema_file_path, 'w') as sf:
-                                    json.dump(schema_obj.model_dump(exclude_none=True), sf, indent=4) # exclude_none for cleaner output
+                                    json.dump(schema_as_dict, sf, indent=4)
                                 logger.info(f"Schema definition saved to {schema_file_path}")
 
                                 if settings.PINATA_API_KEY and settings.PINATA_API_SECRET:
                                     try:
-                                        schema_ipfs_hash = upload_json_to_ipfs(schema_obj.model_dump(exclude_none=True))
-                                        logger.info(f"Schema uploaded to IPFS with hash: {schema_ipfs_hash}")
-                                        # output.schema_ipfs_url = f"ipfs://{schema_ipfs_hash}" # Store if needed by Vana
+                                        # Calculate and log potential CIDs before upload attempt
+                                        cid_v1_dagpb = calculate_cid_for_json_obj(schema_as_dict, version=1, codec_name="dag-pb")
+                                        cid_v0_dagpb = calculate_cid_for_json_obj(schema_as_dict, version=0, codec_name="dag-pb")
+                                        cid_v1_dagjson = calculate_cid_for_json_obj(schema_as_dict, version=1, codec_name="dag-json")
+
+                                        logger.info(f"Locally calculated schema CID (v1, dag-pb, base32): {cid_v1_dagpb}")
+                                        logger.info(f"Locally calculated schema CID (v0, dag-pb, base58btc): {cid_v0_dagpb}")
+                                        logger.info(f"Locally calculated schema CID (v1, dag-json, base32): {cid_v1_dagjson}")
+                                        logger.debug(f"Schema content to be uploaded (first 500 chars): {json.dumps(schema_as_dict)[:500]}")
+
+                                        # Pass the dictionary directly to upload_json_to_ipfs
+                                        schema_ipfs_hash = upload_json_to_ipfs(schema_as_dict)
+                                        logger.info(f"Schema successfully uploaded to IPFS with hash: {schema_ipfs_hash}")
+                                        # output.schema_ipfs_url = f"ipfs://{schema_ipfs_hash}" # Uncomment if needed
                                     except Exception as e:
                                         logger.error(f"Failed to upload schema to IPFS: {e}")
                                 else:
