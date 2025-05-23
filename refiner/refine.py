@@ -42,7 +42,7 @@ class Refiner:
 
         for input_filename in os.listdir(settings.INPUT_DIR):
             input_file_path = os.path.join(settings.INPUT_DIR, input_filename)
-            if os.path.isfile(input_file_path) and input_filename.lower().endswith('.json'):
+            if os.path.isfile(input_file_path) and (input_filename.lower().endswith('.json') or input_filename.lower().endswith('.pgp')):
                 json_files_found_and_attempted += 1
                 logger.info(f"Processing input file: {input_filename}")
                 try:
